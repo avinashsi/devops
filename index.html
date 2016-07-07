@@ -23,5 +23,31 @@
 	   <li>To a <a href="https://bigdata7.blogspot.com"></a>.
 	 </ul>
 
+
+
+
+
+OpenSSH is the de facto standard implementation of the SSH protocol. If PuTTY and OpenSSH differ,
+PuTTY is the one that's incompatible.
+
+If you generate a key with OpenSSH using ssh-keygen with the default options, it will work with virtually every server out there. A server that doesn't accept such a key would be antique, 
+using a different implementation of SSH, or configured in a weird restrictive way. Keys of a non-default type may not be supported on some servers, in particular ECDSA keys make session establishment very slightly
+faster but are only supported by recent versions of OpenSSH.
+
+PuTTY uses a different key file format. It comes with tools to convert between its own .ppk format and 
+the format of OpenSSH.
+
+This ssh-3.2.9.1 you found is a commercial product which has its own different private key format. 
+There's no reason to use it instead of OpenSSH, it can only be less compatible, it requires paying, and there's about 
+zero tutorial on how to use it out there.
+
+
+
+
+
+
+
+
+
   </body>
 </html>
