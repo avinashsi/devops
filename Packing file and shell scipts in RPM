@@ -1,0 +1,259 @@
+Steps
+
+1. Install the following Packages
+#yum install rpm-build rpmdevtools
+
+2. Create a user which will handle the packaging stuff in this case we created a test user by
+[root@puppet home]# useradd test
+cd [root@puppet home]# passwd test
+Changing password for user test.
+New password:
+Retype new password:
+passwd: all authentication tokens updated successfully.
+[root@puppet home]#
+
+3. Now Switch The user to the build user and go the home directory of the user and run the fillowing command
+
+#su test
+$cd ~
+$rpmdev-setuptree
+
+4. It will create the following files required for building the rpms
+
+[test@puppet ~]$ tree rpmbuild/
+rpmbuild/
+├── BUILD
+├── BUILDROOT
+├── RPMS
+├── SOURCES
+└── SRPMS
+
+5. Now put in your shell scripts in SOURCE file in the following format. Create a directory first in following naming format
+E.g. $DIR_NAME-1
+
+$mkdir test-1
+
+6. Now put in your files there as accordingly where you want to keep the files when rpm is deployed on the respective servers.
+In this case we have taken two files as an example which are genrally used in our case i.e. configuration files and shell
+scripts .We usall keep configuration files in /etc folder of os and our shell scripts in the /opt folder.It can be customized as
+according to our needs. Below is just an example
+
+[test@puppet SOURCES]$ tree test-1
+test-1
+├── etc
+│   └── test.conf
+└── opt
+    └── test.sh
+
+7.Following are the contents of the file
+
+[test@puppet test-1]$ pwd
+/home/test/rpmbuild/BUILD/test-1
+[test@puppet test-1]$ cat etc/test.conf
+[mysql]
+data_dir=/var/lib/mysql
+[app_dir_list]
+list1=/app/app1
+list2=/app/app2
+[test@puppet test-1]$ head -7 opt/test.sh
+#!/bin/bash
+#Setting proxy in yum.conf and profile
+#source /etc/profile
+# The proxy server - proxy server:port number
+# The proxy server - proxy server:port number
+###Define Proxy_username and Password in these Variables ###########
+proxy_username=XXXXXXXX
+
+8. Now we just need tar those files by just following simple command
+$ tar -cvzf test-1.tar.gz test-1/
+
+9. Now we create this Spec file which will finally make rpm out of the shell scripts and Configuration .
+
+[test@puppet SPECS]$ cat big_test.spec
+Name:           test
+Version:        1
+Release:        1%{?dist}
+Summary:        Test RPM
+
+License:        GPL
+Source0:        test-1.tar.gz
+BuildArch:      noarch
+BuildRoot:      %{_tmppath}/%{name}-buildroot
+
+%description
+Create a confile and shell fie
+
+%prep
+%setup -q
+
+%install
+mkdir -p "$RPM_BUILD_ROOT"
+cp -R * "$RPM_BUILD_ROOT"
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+/etc/test.conf
+/opt/test.sh
+
+
+10. Now the spec file is ready we just have to run the following command to genrate rpm and also I am
+putting the gernated o/p just for the information
+
+ $rpmbuild -v -bb big_test.spec
+ Executing(%prep): /bin/sh -e /var/tmp/rpm-tmp.naK2O7
++ umask 022
++ cd /home/test/rpmbuild/BUILD
++ cd /home/test/rpmbuild/BUILD
++ rm -rf test-1
++ /usr/bin/gzip -dc /home/test/rpmbuild/SOURCES/test-1.tar.gz
++ /usr/bin/tar -xf -
++ STATUS=0
++ '[' 0 -ne 0 ']'
++ cd test-1
++ /usr/bin/chmod -Rf a+rX,u+w,g-w,o-w .
++ exit 0
+Executing(%install): /bin/sh -e /var/tmp/rpm-tmp.2FVW5R
++ umask 022
++ cd /home/test/rpmbuild/BUILD
++ '[' /home/test/rpmbuild/BUILDROOT/test-1-1.el7.x86_64 '!=' / ']'
++ rm -rf /home/test/rpmbuild/BUILDROOT/test-1-1.el7.x86_64
+++ dirname /home/test/rpmbuild/BUILDROOT/test-1-1.el7.x86_64
++ mkdir -p /home/test/rpmbuild/BUILDROOT
++ mkdir /home/test/rpmbuild/BUILDROOT/test-1-1.el7.x86_64
++ cd test-1
++ mkdir -p /home/test/rpmbuild/BUILDROOT/test-1-1.el7.x86_64
++ cp -R etc opt /home/test/rpmbuild/BUILDROOT/test-1-1.el7.x86_64
++ '[' noarch = noarch ']'
++ case "${QA_CHECK_RPATHS:-}" in
++ /usr/lib/rpm/check-buildroot
++ /usr/lib/rpm/redhat/brp-compress
++ /usr/lib/rpm/redhat/brp-strip /usr/bin/strip
++ /usr/lib/rpm/redhat/brp-strip-comment-note /usr/bin/strip /usr/bin/objdump
++ /usr/lib/rpm/redhat/brp-strip-static-archive /usr/bin/strip
++ /usr/lib/rpm/brp-python-bytecompile /usr/bin/python 1
++ /usr/lib/rpm/redhat/brp-python-hardlink
++ /usr/lib/rpm/redhat/brp-java-repack-jars
+Processing files: test-1-1.el7.noarch
+Provides: test = 1-1.el7
+Requires(rpmlib): rpmlib(CompressedFileNames) <= 3.0.4-1 rpmlib(FileDigests) <= 4.6.0-                                                                                  1 rpmlib(PayloadFilesHavePrefix) <= 4.0-1
+Checking for unpackaged file(s): /usr/lib/rpm/check-files /home/test/rpmbuild/BUILDROO                                                                                  T/test-1-1.el7.x86_64
+Wrote: /home/test/rpmbuild/RPMS/noarch/test-1-1.el7.noarch.rpm
+Executing(%clean): /bin/sh -e /var/tmp/rpm-tmp.rtDSin
++ umask 022
++ cd /home/test/rpmbuild/BUILD
++ cd test-1
++ rm -rf /home/test/rpmbuild/BUILDROOT/test-1-1.el7.x86_64
++ exit 0
+
+
+11. Now we can see the genrated rpm files in the rpm directory
+[test@puppet rpmbuild]$ tree RPMS/
+RPMS/
+└── noarch
+    └── test-1-1.el7.noarch.rpm
+
+1 directory, 1 file
+
+12. Now before installing the rpm we can check wether the /etc/test.conf and  /opt/test.sh exist or not Just for testing purpose
+again this step can be ignored
+
+[test@puppet rpmbuild]$ ls /etc/
+abrt                       cron.monthly             gnupg          libuser.conf              passwd                  rkhunter.conf   sudoers.d
+adjtime                    crontab                  GREP_COLORS    locale.conf               passwd-                 rpc             sudoers.rpmnew
+aide.conf                  cron.weekly              groff          localtime                 pinforc                 rpm             sudo-ldap.conf
+aliases                    crypttab                 group          login.defs                pkcs11                  rpmdevtools     sysconfig
+aliases.db                 csh.cshrc                group-         logrotate.conf            pki                     rsyncd.conf     sysctl.conf
+alternatives               csh.login                grub2.cfg      logrotate.d               plymouth                rsyslog.conf    sysctl.d
+anacrontab                 dbbackup                 grub.d         lsm                       pm                      rsyslog.d       systemd
+asound.conf                dbus-1                   gshadow        lvm                       polkit-1                rwtab           system-release
+at.deny                    default                  gshadow-       machine-id                popt.d                  rwtab.d         system-release-cpe
+audisp                     depmod.d                 gss            magic                     postfix                 sasl2           tcsd.conf
+audit                      dhcp                     gssproxy       mail.rc                   ppp                     scl             terminfo
+autofs.conf                DIR_COLORS               hiera.yaml     makedumpfile.conf.sample  prelink.conf.d          screenrc        tmpfiles.d
+autofs_ldap_auth.conf      DIR_COLORS.256color      host.conf      man_db.conf               printcap                securetty       trusted-key.key
+auto.master                DIR_COLORS.lightbgcolor  hostname       mke2fs.conf               profile                 security        tuned
+auto.master.d              dnsmasq.conf             hosts          modprobe.d                profile.d               selinux         udev
+auto.misc                  dnsmasq.d                hosts.allow    modules-load.d            protocols               services        updatedb.conf
+auto.net                   docker                   hosts.deny     motd                      puppet                  sestatus.conf   usb_modeswitch.conf
+auto.smb                   dracut.conf              idmapd.conf    mtab                      python                  setroubleshoot  vagrant_box_build_time
+avahi                      dracut.conf.d            init.d         my.cnf                    rc0.d                   setuptool.d     vconsole.conf
+bash_completion.d          e2fsck.conf              inittab        my.cnf.d                  rc1.d                   shadow          vimrc
+bashrc                     environment              inputrc        nanorc                    rc2.d                   shadow-         virc
+binfmt.d                   ethertypes               iproute2       netconfig                 rc3.d                   shells          wgetrc
+cgconfig.conf              exports                  issue          NetworkManager            rc4.d                   skel            wpa_supplicant
+cgconfig.d                 exports.d                issue.net      networks                  rc5.d                   smartmontools   X11
+cgrules.conf               favicon.png              kdump.conf     nfsmount.conf             rc6.d                   sos.conf        xdg
+cgsnapshot_blacklist.conf  filesystems              kernel         nsswitch.conf             rc.d                    ssh             xinetd.d
+chkconfig.d                firewalld                krb5.conf      nsswitch.conf.bak         rc.local                ssl             yum
+chrony.conf                fprintd.conf             krb5.conf.d    nsswitch.conf.rpmnew      rdma                    statetab        yum.conf
+chrony.keys                fstab                    ld.so.cache    ntp                       redhat-access-insights  statetab.d      yum.repos.d
+cifs-utils                 gcrypt                   ld.so.conf     ntp.conf                  redhat-release          subgid
+cron.d                     gdbinit                  ld.so.conf.d   openldap                  request-key.conf        subuid
+cron.daily                 gdbinit.d                libaudit.conf  opt                       request-key.d           subversion
+cron.deny                  GeoIP.conf               libnl          os-release                resolv.conf             sudo.conf
+cron.hourly                GeoIP.conf.default       libreport      pam.d                     rhsm                    sudoers
+
+
+Check /opt folder
+
+[test@puppet rpmbuild]$ ls /opt/
+pkgs  rh  scripts  VBoxGuestAdditions-5.0.16  VBoxGuestAdditions-5.1.10
+[test@puppet rpmbuild]$
+
+13. Now we will install the rpm and check the results after that inorder to do that we must switch back as an superuser
+
+[root@puppet noarch]# rpm -ivh test-1-1.el7.noarch.rpm
+Preparing...                                                            (100%)#                                 (100%)##                                (100%)###                               (100%)####                              (100%)#####                             (100%)######                            (100%)#######                           (100%)########                          (100%)#########                         (100%)##########                        (100%)###########                       (100%)############                      (100%)#############                     (100%)##############                    (100%)###############                   (100%)################                  (100%)#################                 (100%)##################                (100%)###################               (100%)####################              (100%)#####################             (100%)######################
+Updating / installing...
+   1:test-1-1.el7                                                       (  9%)#                                 (  9%)##                                (  9%)###                               ( 94%)####                              ( 94%)#####                             ( 94%)######                            ( 94%)#######                           ( 94%)########                          ( 94%)#########                         ( 94%)##########                    (94%)###########                       ( 94%)############            ( 94%)#############                     ( 94%)##############                    ( 94%)###############                   ( 94%)################                  ( 94%)#################                 ( 94%)##################                ( 94%)###################               ( 94%)####################              ( 94%)#####################             ( 94%)######################
+
+14. The installation is done now lets see the results
+
+[test@puppet rpmbuild]$ ls /etc/
+abrt                       cron.monthly             gnupg          libuser.conf              passwd                  rkhunter.conf   sudoers.d
+adjtime                    crontab                  GREP_COLORS    locale.conf               passwd-                 rpc             sudoers.rpmnew
+aide.conf                  cron.weekly              groff          localtime                 pinforc                 rpm             sudo-ldap.conf
+aliases                    crypttab                 group          login.defs                pkcs11                  rpmdevtools     sysconfig
+aliases.db                 csh.cshrc                group-         logrotate.conf            pki                     rsyncd.conf     sysctl.conf
+alternatives               csh.login                grub2.cfg      logrotate.d               plymouth                rsyslog.conf    sysctl.d
+anacrontab                 dbbackup                 grub.d         lsm                       pm                      rsyslog.d       systemd
+asound.conf                dbus-1                   gshadow        lvm                       polkit-1                rwtab           system-release
+at.deny                    default                  gshadow-       machine-id                popt.d                  rwtab.d         system-release-cpe
+audisp                     depmod.d                 gss            magic                     postfix                 sasl2           tcsd.conf
+audit                      dhcp                     gssproxy       mail.rc                   ppp                     scl             terminfo
+autofs.conf                DIR_COLORS               hiera.yaml     makedumpfile.conf.sample  prelink.conf.d          screenrc        test.conf
+autofs_ldap_auth.conf      DIR_COLORS.256color      host.conf      man_db.conf               printcap                securetty       tmpfiles.d
+auto.master                DIR_COLORS.lightbgcolor  hostname       mke2fs.conf               profile                 security        trusted-key.key
+auto.master.d              dnsmasq.conf             hosts          modprobe.d                profile.d               selinux         tuned
+auto.misc                  dnsmasq.d                hosts.allow    modules-load.d            protocols               services        udev
+auto.net                   docker                   hosts.deny     motd                      puppet                  sestatus.conf   updatedb.conf
+auto.smb                   dracut.conf              idmapd.conf    mtab                      python                  setroubleshoot  usb_modeswitch.conf
+avahi                      dracut.conf.d            init.d         my.cnf                    rc0.d                   setuptool.d     vagrant_box_build_time
+bash_completion.d          e2fsck.conf              inittab        my.cnf.d                  rc1.d                   shadow          vconsole.conf
+bashrc                     environment              inputrc        nanorc                    rc2.d                   shadow-         vimrc
+binfmt.d                   ethertypes               iproute2       netconfig                 rc3.d                   shells          virc
+cgconfig.conf              exports                  issue          NetworkManager            rc4.d                   skel            wgetrc
+cgconfig.d                 exports.d                issue.net      networks                  rc5.d                   smartmontools   wpa_supplicant
+cgrules.conf               favicon.png              kdump.conf     nfsmount.conf             rc6.d                   sos.conf        X11
+cgsnapshot_blacklist.conf  filesystems              kernel         nsswitch.conf             rc.d                    ssh             xdg
+chkconfig.d                firewalld                krb5.conf      nsswitch.conf.bak         rc.local                ssl             xinetd.d
+chrony.conf                fprintd.conf             krb5.conf.d    nsswitch.conf.rpmnew      rdma                    statetab        yum
+chrony.keys                fstab                    ld.so.cache    ntp                       redhat-access-insights  statetab.d      yum.conf
+cifs-utils                 gcrypt                   ld.so.conf     ntp.conf                  redhat-release          subgid          yum.repos.d
+cron.d                     gdbinit                  ld.so.conf.d   openldap                  request-key.conf        subuid
+cron.daily                 gdbinit.d                libaudit.conf  opt                       request-key.d           subversion
+cron.deny                  GeoIP.conf               libnl          os-release                resolv.conf             sudo.conf
+cron.hourly                GeoIP.conf.default       libreport      pam.d                     rhsm                    sudoers
+
+Check For the Shell Scripts
+
+[test@puppet rpmbuild]$ ls /opt/
+pkgs  rh  scripts  test.sh  VBoxGuestAdditions-5.0.16  VBoxGuestAdditions-5.1.10
+[test@puppet rpmbuild]$
+
+
+Clearly we can see that both files are available now.
+
+
