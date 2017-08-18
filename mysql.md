@@ -1,4 +1,4 @@
-*** MySql 5.6 error (Table 'mysql.user' doesn't exist) when started as a daemon***
+***MySql 5.6 error (Table 'mysql.user' doesn't exist) when started as a daemon***
 
 
 
@@ -7,7 +7,7 @@
 
 
 
-**First check /etc/init.d/mysql File see if every thing is right there as according to your mysql base path and binary path **
+**First check /etc/init.d/mysql File see if every thing is right there as according to your mysql base path and binary path**
 
 
 ```
