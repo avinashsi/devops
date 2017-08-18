@@ -393,7 +393,7 @@ exit 0
 ```
 
 
-** Now Switch User  to mysql and run following commands**
+**Now Switch User  to mysql and run following commands**
 
 ```
 [root@puppet mysql]# su mysql
